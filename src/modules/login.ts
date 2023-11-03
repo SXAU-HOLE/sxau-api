@@ -3,6 +3,7 @@ import axios from "axios";
 import encodeInp from "../utils/encode";
 import qs from "qs";
 import * as cheerio from "cheerio";
+import { createResponse } from "../utils/utils";
 
 const login_url: string = "http://jwglxt.sxau.edu.cn/jsxsd/xk/LoginToXk";
 let cookie: string | undefined;
@@ -23,18 +24,25 @@ export default async function login(req: Request, res: Response) {
     };
   }
   const encoded = encodeInp(username) + "%%%" + encodeInp(password);
+  const data = {
+    loginMethod: "LoginToXk",
+    userAccount: username,
+    userPassword: "",
+    encoded,
+  };
 
   cookie = await getCookie();
 
-  return login_verify(
-    {
-      loginMethod: "LoginToXk",
-      userAccount: username,
-      userPassword: "",
-      encoded,
-    },
-    cookie
-  );
+  const isLogin = await active_cookie(data);
+
+  if(isLogin) {
+    return createResponse("登录成功", {
+      cookie
+    })
+  } else {
+    return createResponse("账号或密码错误-", {} , 401)
+  }
+
 }
 
 async function active_cookie(data: any): Promise<boolean> {
@@ -106,32 +114,4 @@ async function getProfile() {
     },
     msg: "获取信息成功！",
   };
-}
-
-async function login_verify(data: any, cookie: string | undefined) {
-  if (!cookie) {
-    return;
-  }
-
-  try {
-    const is_login = await active_cookie(data);
-
-    if (!is_login) {
-      return {
-        code: 401,
-        msg: "账号或密码错误",
-      };
-    }
-
-    const profile = await getProfile();
-
-    return profile;
-  } catch (err) {
-    console.error(err);
-
-    return {
-      code: 500,
-      msg: "服务器出问题啦~",
-    };
-  }
 }
