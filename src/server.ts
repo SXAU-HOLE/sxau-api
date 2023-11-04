@@ -1,6 +1,7 @@
 import { Express } from "express";
 import * as fs from "fs";
 import login from "./modules/login";
+import MobileLogin from './modules/mobile/login'
 
 async function getModule(mobile = false) {
   let files: string[] = [];
@@ -27,6 +28,9 @@ async function setupRoute(app: Express) {
   app.post("/login", async (req, res) => {
     res.send(await login(req, res));
   });
+  app.post('/mobile/login', async(req,res) => {
+    res.send(await MobileLogin(req,res))
+  })
 }
 
 export async function setupServer(app: Express) {
