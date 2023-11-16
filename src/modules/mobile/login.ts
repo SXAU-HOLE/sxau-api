@@ -10,7 +10,10 @@ export default async function (req: Request, res: Response) {
 
   const url = `http://jwglxtyd.sxau.edu.cn:8080/njwhd/login?userNo=${username}&pwd=${pwd}&encode=1&captchaData=&codeVal=`
 
-  const { data } = await axios.post(url)
-
-  return data
+  try {
+    const { data } = await axios.post(url)
+    return data
+  } catch (err) {
+    throw new Error("请联系管理员，服务器出错啦~")
+  }
 }
