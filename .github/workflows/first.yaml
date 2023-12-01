@@ -1,0 +1,9 @@
+name: Github Actions Test
+
+on: push
+
+jobs: 
+  job1:
+    runs-on: ubuntu-latest
+
+    

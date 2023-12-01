@@ -1,5 +1,6 @@
-import { Express, Request, Response, query } from "express"
+import { Express, Request, Response, query, response } from "express"
 import * as fs from "fs"
+import { isLogin } from "./modules/login"
 
 async function getModule(mobile = false) {
   let files: string[] = []
@@ -37,16 +38,36 @@ async function getModule(mobile = false) {
 }
 
 async function routerHandler(req: Request, res: Response, item: any) {
-  const moduleResponse = await item.module(req, res)
-  res.send(moduleResponse)
+  if (item.route.includes("login")) {
+    const moduleResponse = await item.module(req, res)
+    res.send(moduleResponse)
+    return
+  }
+
+  const cookie = req.headers.cookie as string
+
+  isLogin(cookie).then(async (response) => {
+    if (response) {
+      if (cookie) {
+        res.setHeader("Set-Cookie", cookie)
+      }
+
+      const moduleResponse = await item.module(req, res)
+      res.send(moduleResponse)
+    } else {
+      res.status(401).send({
+        msg: "请登陆后查看",
+        code: 401,
+      })
+    }
+  })
 }
 
 async function setupRoute(app: Express) {
   const routes = [...(await getModule()), ...(await getModule(true))]
-  console.log(routes)
 
   routes.forEach((item) => {
-    console.log(item.module)
+    console.log(item.route)
 
     if (item.get) {
       app.get(item.route, (req, res) => routerHandler(req, res, item))

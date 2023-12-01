@@ -1,48 +1,47 @@
-import { Request, Response } from "express";
-import axios from "axios";
-import encodeInp from "../utils/encode";
-import qs from "qs";
-import * as cheerio from "cheerio";
-import { createResponse } from "../utils/utils";
+import { Request, Response } from "express"
+import axios, { AxiosError, AxiosResponse } from "axios"
+import encodeInp from "../utils/encode"
+import qs from "qs"
+import * as cheerio from "cheerio"
+import { createResponse } from "../utils/utils"
 
-const login_url: string = "http://jwglxt.sxau.edu.cn/jsxsd/xk/LoginToXk";
-let cookie: string | undefined;
+const login_url: string = "http://jwglxt.sxau.edu.cn/jsxsd/xk/LoginToXk"
+let cookie: string | undefined
 
 async function getCookie() {
-  const res = await axios.get("http://jwglxt.sxau.edu.cn/jsxsd/");
-  return res?.headers?.["set-cookie"]?.[0];
+  const res = await axios.get("http://jwglxt.sxau.edu.cn/jsxsd/")
+  return res?.headers?.["set-cookie"]?.[0]
 }
 
 export default async function login(req: Request, res: Response) {
-  const username = req.query.username;
-  const password = req.query.password;
+  const username = req.query.username
+  const password = req.query.password
 
   if (!username || !password) {
     return {
       code: 400,
       msg: "用户名或密码不能为空",
-    };
+    }
   }
-  const encoded = encodeInp(username) + "%%%" + encodeInp(password);
+  const encoded = encodeInp(username) + "%%%" + encodeInp(password)
   const data = {
     loginMethod: "LoginToXk",
     userAccount: username,
     userPassword: "",
     encoded,
-  };
-
-  cookie = await getCookie();
-
-  const isLogin = await active_cookie(data);
-
-  if(isLogin) {
-    return createResponse("登录成功", {
-      cookie
-    })
-  } else {
-    return createResponse("账号或密码错误-", {} , 401)
   }
 
+  cookie = await getCookie()
+
+  const isLogin = await active_cookie(data)
+
+  if (isLogin) {
+    return createResponse("登录成功", {
+      cookie,
+    })
+  } else {
+    return createResponse("账号或密码错误-", {}, 401)
+  }
 }
 
 async function active_cookie(data: any): Promise<boolean> {
@@ -62,16 +61,16 @@ async function active_cookie(data: any): Promise<boolean> {
     "Upgrade-Insecure-Requests": "1",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-  };
+  }
   const res = await axios({
     method: "POST",
     headers: header,
     data: qs.stringify(data),
     url: login_url,
-  });
+  })
 
   // 登陆成功重定向到这个页面
-  return res.request.path === "/jsxsd/framework/xsMainV.htmlx";
+  return res.request.path === "/jsxsd/framework/xsMainV.htmlx"
 }
 
 async function getProfile() {
@@ -87,22 +86,22 @@ async function getProfile() {
     "Upgrade-Insecure-Requests": "1",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-  };
+  }
 
   const { data: profile } = await axios({
     method: "GET",
     headers: header2,
     url: "http://jwglxt.sxau.edu.cn/jsxsd/grxx/xsxx",
-  });
+  })
 
-  const $ = cheerio.load(profile);
-  const u_college = $('#xjkpTable td:contains("院系：")').text().split("：")[1];
-  const u_major = $('#xjkpTable td:contains("专业：")').text().split("：")[1];
-  const u_class = $('#xjkpTable td:contains("班级：")').text().split("：")[1];
+  const $ = cheerio.load(profile)
+  const u_college = $('#xjkpTable td:contains("院系：")').text().split("：")[1]
+  const u_major = $('#xjkpTable td:contains("专业：")').text().split("：")[1]
+  const u_class = $('#xjkpTable td:contains("班级：")').text().split("：")[1]
   const u_name = $('#xjkpTable td:contains("姓名"):first')
     .next("td")
     .text()
-    .trim();
+    .trim()
 
   return {
     code: 200,
@@ -113,5 +112,28 @@ async function getProfile() {
       u_name,
     },
     msg: "获取信息成功！",
-  };
+  }
+}
+
+export async function isLogin(cookie: string) {
+  const url = "http://jwglxt.sxau.edu.cn/jsxsd/"
+
+  if (!cookie) {
+    return
+  }
+
+  try {
+    const res = await axios.get(
+      "http://jwglxt.sxau.edu.cn/jsxsd/framework/xsMainV.htmlx",
+      { headers: { Cookie: cookie } }
+    )
+
+    if (res.data?.indexOf("欢迎")) {
+      return true
+    }
+  } catch (err: any) {
+    return false
+  }
+
+  return true
 }
